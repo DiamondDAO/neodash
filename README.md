@@ -1,39 +1,77 @@
-
 ## NeoDash - Neo4j Dashboard Builder
-NeoDash is an open source tool for visualizing your Neo4j data. It lets you group visualizations together as dashboards, and allow for interactions between reports. 
+
+NeoDash is an open source tool for visualizing your Neo4j data. It lets you group visualizations together as dashboards, and allow for interactions between reports.
 
 ![screenshot](public/screenshot.png)
 
 Neodash supports presenting your data as tables, graphs, bar charts, line charts, maps and more. It contains a Cypher editor to directly write the Cypher queries that populate the reports. You can save dashboards to your database, and share them with others.
 
-## Running NeoDash
-You can run NeoDash in one of three ways:
+I have added the instructions here for both using the dashboard system locally as well as publishing a dashboard with a web server.
 
-1. You can install NeoDash into Neo4j Desktop from the [graph app gallery](https://install.graphapp.io). NeoDash will automatically connect to your active database.
-2. You can run NeoDash from a web browser by visiting http://neodash.graphapp.io.
-3. For on-prem deployments, you can build the application yourself, or pull the latest Docker image from Docker Hub.
+## Initial Steps
+
+First clone this repository, cd into the repository, and install the necessary dependencies:
+
 ```
-# Run the application on http://localhost:5005
-docker pull nielsdejong/neodash:latest
-docker run -it --rm -p 5005:5005 nielsdejong/neodash
+git clone git@github.com:DiamondDAO/neodash.git
+cd neodash
+npm install
 ```
 
-> Windows users may need to prefix the `docker run` command with `winpty`.
+## Running locally
 
-See the [Developer Guide](https://github.com/neo4j-labs/neodash/wiki/Developer%20Guide) for more on installing, building, and running the application.
+To run the instance locally, use command `npm run dev`. This will host neodash at `localhost:3000` by default and will allow you to connect to an instance, create dashboards, and save dashboards.
 
-## User Guide
-NeoDash comes with built-in examples of dashboards and reports. For more details on the types of reports and how to customize them, see the [User Guide](
-https://github.com/neo4j-labs/neodash/wiki/User-Guide).
+## Publishing a dashboard
 
-## Publish Dashboards
-After building a dashboard, you can chose to deploy a read-only, standalone instance for users. See [Publishing](https://github.com/neo4j-labs/neodash/wiki/Publishing) for more on publishing dashboards.
+After creating a dashboard, you may want to publish this dashboard as a url which can be easily shared. To do this, first ensure that your dashboard has a unique name and is saved to the graph instance.
 
+In your neodash repo, run `npm run build`. This will create a `dist/` folder which has the necessary components to host a dashboard. Locate the `config.json` file and change it to have this structure:
 
-## Questions / Suggestions
-If you have any questions about NeoDash, please reach out to the maintainers:
-- Create an [Issue](https://github.com/nielsdejong/neodash/issues/new) on GitHub for feature requests/bugs.
-- Connect with us on the [Neo4j Discord](https://neo4j.com/developer/discord/).
-- Create a post on the Neo4j [Community Forum](https://community.neo4j.com/).
+```
+{
+    "ssoEnabled": false,
+    "ssoDiscoveryUrl": "https://example.com/",
+    "standalone": true,
+    "standaloneProtocol": "neo4j+s",
+    "standaloneHost": "URI",
+    "standalonePort": "7687",
+    "standaloneDatabase": "neo4j",
+    "standaloneDashboardName": "DASHBOARD_NAME",
+    "standaloneUsername": "USERNAME",
+    "standalonePassword": "PASSWORD",
+    "standaloneDashboardDatabase": "",
+    "standaloneDashboardURL": ""
+}
+```
 
-> NeoDash is a free and open-source tool developed by the Neo4j community - not an official Neo4j product. If you have a need for a commercial agreement around training, custom extensions or other services, please contact the [Neo4j Professional Services](https://neo4j.com/professional-services/) team.
+Some of these values are fixed, but the password and username need to be set appropriately as well as the connection details (the URI/host without the protocol and the protocol separately). Finally, the standaloneDashboardName should have the name of the saved dashboard in the neo4j instance which you wish to publish.
+
+Navigate to Google Cloud and create a new project (assume name of project is PROJECT_NAME). Additionally create a bucket (assume name of bucket is BUCKET_NAME).
+
+Then, create a `app.yaml` file separately (not inside the `dist/` folder) which looks like this and fill in the proper BUCKET_NAME:
+
+```
+runtime: nodejs16
+
+instance_class: F2
+
+env_variables:
+  BUCKET_NAME: "BUCKET_NAME"
+
+handlers:
+  - url: /
+    static_files: dist/index.html
+    upload: dist/index.html
+
+  - url: /
+    static_dir: dist/
+```
+
+Upload the `dist/` folder and `app.yaml` to the bucket which was just created separately, so your bucket looks like:
+
+![screenshot](public/bucket.png)
+
+Open the google cloud shell and connect to the created project. Create a folder for your project: `mkdir my-app` and then run the command `gsutil rsync -r gs://{BUCKET_NAME} ./my-app` and replace the {BUCKET_NAME} with the actual name of the bucket. This will sync the files and copy them to your `my-app` folder. CD into the folder with `cd my-app` and run `gcloud app deploy`. This may prompt you for authorization and to choose a location, but after completion your dashboard should be published.
+
+Run the command `gcloud app browse` to get the url of your hosted dashboard and you should be able to navigate to it and see your work. This hosting also has the added benefit of updating automatically, thus whenever you update the dashboard and re-save it to the neo4j instance, the changes will be reflected in this hosted URL.
