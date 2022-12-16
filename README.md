@@ -75,3 +75,17 @@ Upload the `dist/` folder and `app.yaml` to the bucket which was just created se
 Open the google cloud shell and connect to the created project. Create a folder for your project: `mkdir my-app` and then run the command `gsutil rsync -r gs://{BUCKET_NAME} ./my-app` and replace the {BUCKET_NAME} with the actual name of the bucket. This will sync the files and copy them to your `my-app` folder. CD into the folder with `cd my-app` and run `gcloud app deploy`. This may prompt you for authorization and to choose a location, but after completion your dashboard should be published.
 
 Run the command `gcloud app browse` to get the url of your hosted dashboard and you should be able to navigate to it and see your work. This hosting also has the added benefit of updating automatically, thus whenever you update the dashboard and re-save it to the neo4j instance, the changes will be reflected in this hosted URL.
+
+## Fixing the version issue
+
+When deploying to a web server, the neodash application seems to break when the dashboard version is set at 2.2, however it is very easy to work around this by simply changing the dashboard version in neo4j.
+
+To get started, load up the neo4j desktop and open the neodash application to connect to the proper instance. From here, click load dashboard then select from neo4j to find the dashboard you wish to fix. After clicking this, you should see a JSON representation of the dashboard similar to:
+
+![screenshot](public/dash_json.png)
+
+From here, we see that the version is set to 2.2 in line 3 of the JSON, so simply change this to 2.1 then click the green Load Dashboard button in the top right. Now, click the save button in the left menu and then the save to neo4j button. From here, ensure that the overwrite checkbox is selected and click save:
+
+![screenshot](public/save_dash.png)
+
+This should have fixed the issue and you can verify that the dashboard url is now working properly.
